@@ -1,14 +1,26 @@
+import java.net.MalformedURLException;
+import java.net.URL;
+
 public class HttpClient {
 
     String protocol, host, filename;
     int port;
 
     public static void main(String[] args) {
-        System.out.println("Hello World!");
+        if (args.length < 1) {
+            System.err.println("Usage: You must provide a URL as first argument");
+            System.exit(1);
+        }
+        HttpClient.readURL(args[0]);
     }
 
-    void readURL(String url) {
-        // read the content of the URL
+    void readURL(String in) {
+        try {
+            URL url = new URL(in);
+            System.out.println(url.toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
     }
 
     String getURL(String url) {
