@@ -14,7 +14,7 @@ public class HttpClient {
         HttpClient.readURL(args[0]);
     }
 
-    void readURL(String in) {
+    static void readURL(String in) {
         try {
             URL url = new URL(in);
             System.out.println(url.toString());
@@ -23,7 +23,7 @@ public class HttpClient {
         }
     }
 
-    String getURL(String url) {
+    static String getURL(String url) {
         // return the content of the URL
         return null;
     }
