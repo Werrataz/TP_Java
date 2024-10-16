@@ -1,8 +1,12 @@
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
-
 
 public class HttpClient {
 
@@ -18,13 +22,6 @@ public class HttpClient {
         client.port = 80;
         client.filename = "/rfc.txt";
         client.readURL(args[0]);
-        try {
-            Socket socket = new Socket(client.host, client.port);
-            System.out.println("Connected to " + client.host + " on port " + client.port);
-            socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     void readURL(String in) {
@@ -38,8 +35,30 @@ public class HttpClient {
         }
     }
 
-    static String getURL(String url) {
-        // return the content of the URL
+    String getURL() {
+        try {
+            Socket socket = new Socket(this.host, this.port);
+            int compt = 0;
+            while (!socket.isConnected()) {
+                if (compt > 50) { // Interupt after 5 seconds
+                    System.err.println("Connection failed");
+                    System.exit(1);
+                }
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                compt++;
+            }
+            System.out.println("Connected to " + this.host + " on port " + this.port);
+            InputStream inputStream = socket.getInputStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            OutputStream outputStream = socket.getOutputStream();
+            PrintWriter writer = new PrintWriter(outputStream, true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 }
