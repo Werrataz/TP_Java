@@ -1,5 +1,8 @@
+import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.Socket;
 import java.net.URL;
+
 
 public class HttpClient {
 
@@ -11,13 +14,25 @@ public class HttpClient {
             System.err.println("Usage: You must provide a URL as first argument");
             System.exit(1);
         }
-        HttpClient.readURL(args[0]);
+        HttpClient client = new HttpClient();
+        client.port = 80;
+        client.filename = "/rfc.txt";
+        client.readURL(args[0]);
+        try {
+            Socket socket = new Socket(client.host, client.port);
+            System.out.println("Connected to " + client.host + " on port " + client.port);
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    static void readURL(String in) {
+    void readURL(String in) {
         try {
             URL url = new URL(in);
-            System.out.println(url.toString());
+            this.host = url.getHost();
+            this.port = url.getPort();
+            this.filename = url.getFile();
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
