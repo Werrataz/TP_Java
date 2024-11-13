@@ -1,3 +1,4 @@
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Scanner;
@@ -20,6 +21,9 @@ public class TCPClient {
             Scanner scanner = new Scanner(System.in);
             String message;
 
+            // Create a PrintWriter to send data to the server
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+
             while (true) {
                 // Read input from the user
                 System.out.print("Enter message (or 'exit' to quit): ");
@@ -32,7 +36,7 @@ public class TCPClient {
                 }
 
                 // Send the message to the server
-                System.out.println(message);
+                out.println(message);
                 System.out.println("Message sent to server.");
             }
         } catch (Exception e) {
