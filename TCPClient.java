@@ -1,7 +1,9 @@
-import java.io.PrintWriter;
-import java.net.DatagramSocket;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.lang.management.OperatingSystemMXBean;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class TCPClient {
@@ -17,13 +19,10 @@ public class TCPClient {
 
     // Method to send messages to the server
     public void start() {
-               try (DatagramSocket socket = new DatagramSocket()) {
-           InetAddress serverInetAddress = InetAddress.getByName(this.serverAddress);
+        try (Socket socket = new Socket(InetAddress.getByName(this.serverAddress), this.port)) {
+            // Use Scanner to read input from the user
             Scanner scanner = new Scanner(System.in);
             String message;
-
-            // Create a PrintWriter to send data to the server
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
             while (true) {
                 // Read input from the user
@@ -37,7 +36,7 @@ public class TCPClient {
                 }
 
                 // Send the message to the server
-                out.println(message);
+                System.out.println(message);
                 System.out.println("Message sent to server.");
             }
         } catch (Exception e) {
