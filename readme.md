@@ -1,4 +1,4 @@
-# Projet Java dans le cadre du cursus à l'ENSEA
+# Java project as part of ENSEA curriculum
    
-Cette partie du code a été réalisée pendant le TP 2. Il s'agit de la partie pour le **serveur UDP en java**.    
-La branche TP_2-client contient le client UDP capable de communiquer avec le serveur de cette branche.    
+This part of the code was created during TP 2 & 3. It is the part for the **server**.    
+The __client__ branch contains the UDP client capable of communicating with the server in this branch.    
