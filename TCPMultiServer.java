@@ -51,16 +51,14 @@ public class TCPMultiServer {
 
                 String clientMessage;
                 while ((clientMessage = in.readLine()) != null) {
+                    // We write a message with the ip address to identify each client
                     System.out.println("Received from client " + socket.getInetAddress().getHostAddress() + ", Message : " + clientMessage);
-
                     if ("exit".equalsIgnoreCase(clientMessage)) {
                         System.out.println("Client disconnected");
                         break;
                     }
-
                     out.println("Server received: " + clientMessage);
                 }
-
                 System.out.println("Closing the connection");
                 socket.close();
             } catch (Exception e) {
@@ -70,14 +68,13 @@ public class TCPMultiServer {
     }
 
     public static void main(String[] args) {
+        TCPMultiServer server;
         if (args.length < 1) {
-            System.out.println("Usage: java TCPMultiServer <port>");
-            return;
+            server = new TCPMultiServer();
+        } else {
+            int port = Integer.parseInt(args[0]);
+            server = new TCPMultiServer(port);
         }
-
-        int port = Integer.parseInt(args[0]);
-
-        TCPMultiServer server = new TCPMultiServer(port);
         server.start();
     }
 }
