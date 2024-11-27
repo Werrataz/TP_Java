@@ -1,3 +1,5 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -7,55 +9,74 @@ public class TCPClient {
 
     private String serverAddress;
     private int port;
+    private Socket socket;
+    private BufferedReader in;
+    private PrintWriter out;
 
-    // Constructor to initialize server address and port
     public TCPClient(String serverAddress, int port) {
         this.serverAddress = serverAddress;
         this.port = port;
     }
 
-    // Method to send messages to the server
     public void start() {
-        try (Socket socket = new Socket(InetAddress.getByName(this.serverAddress), this.port)) {
-            // Use Scanner to read input from the user
+        try {
+            socket = new Socket(InetAddress.getByName(this.serverAddress), this.port);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new PrintWriter(socket.getOutputStream(), true);
+
+            Thread readServerResponse = new Thread(new ServerResponseHandler());
+            readServerResponse.start();
+
             Scanner scanner = new Scanner(System.in);
             String message;
 
-            // Create a PrintWriter to send data to the server
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-
+            System.out.println("Enter message (or 'exit' to quit):");
             while (true) {
-                // Read input from the user
-                System.out.print("Enter message (or 'exit' to quit): ");
                 message = scanner.nextLine();
 
-                // Check if the user wants to exit
                 if ("exit".equalsIgnoreCase(message)) {
                     System.out.println("Exiting...");
                     break;
                 }
 
-                // Send the message to the server
                 out.println(message);
                 System.out.println("Message sent to server.");
             }
+
+            socket.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    // Main method to start the client
+    private class ServerResponseHandler implements Runnable {
+        @Override
+        public void run() {
+            try {
+                String serverMessage;
+                while ((serverMessage = in.readLine()) != null) {
+                    System.out.println("\nServer response: " + serverMessage + "\nEnter message (or 'exit' to quit):");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public static void main(String[] args) {
-        if (args.length < 2) {
+        TCPClient client;
+        if (args.length < 1) {
             System.out.println("Usage: java TCPClient <server_address> <port>");
             return;
+        } else if (args.length == 1) {
+            String serverAddress = args[0];
+            client = new TCPClient(serverAddress, 8080);
+        } else {
+            String serverAddress = args[0];
+            int port = Integer.parseInt(args[1]);
+            client = new TCPClient(serverAddress, port);
         }
-
-        String serverAddress = args[0];
-        int port = Integer.parseInt(args[1]);
-
-        // Create and start the TCP client
-        TCPClient client = new TCPClient(serverAddress, port);
+        
         client.start();
     }
 }

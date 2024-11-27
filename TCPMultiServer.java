@@ -3,10 +3,13 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-   
+import java.util.HashMap;
+import java.util.Map;
+
 public class TCPMultiServer {
 
     private int port;
+    private Map<String, ClientHandler> clients;
 
     public TCPMultiServer(int port) {
         if (port < 0 || port > 49151) {
@@ -15,10 +18,12 @@ public class TCPMultiServer {
         } else {
             this.port = port;
         }
+        this.clients = new HashMap<>();
     }
 
     public TCPMultiServer() {
         this.port = 8080;
+        this.clients = new HashMap<>();
     }
 
     public void start() {
@@ -28,18 +33,27 @@ public class TCPMultiServer {
             while (true) {
                 Socket socket = serverSocket.accept();
                 System.out.println("New client connected");
-
-                // Create a new thread for each client connection
-                new ClientHandler(socket).start();
+                ClientHandler clientHandler = new ClientHandler(socket);
+                clients.put(socket.getInetAddress().getHostAddress(), clientHandler);
+                clientHandler.start();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    // class to manage each client connection
-    private static class ClientHandler extends Thread {
+    private class ClientHandler extends Thread {
         private Socket socket;
+        private String nickname;
+        private String user;
+        private String id;
+        private PrintWriter printOut;
+        private BufferedReader readIn;
+        private int numberOfMessages;
+        private int numberOfBlockedMessages;
+        private Boolean banned;
+        protected static Map<String, ClientHandler> clients = new HashMap<>();
+        
 
         public ClientHandler(Socket socket) {
             this.socket = socket;
@@ -47,23 +61,74 @@ public class TCPMultiServer {
 
         public void run() {
             try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
-
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+                this.printOut = out;
+                this.readIn = in;
+                ChatProtocolParser parser = new ChatProtocolParser();
                 String clientMessage;
+                
+                this.nickname = socket.getInetAddress().getHostAddress();
+                this.banned = false;
+                ClientHandler.clients.put(this.nickname, this);
+                
                 while ((clientMessage = in.readLine()) != null) {
-                    // We write a message with the ip address to identify each client
-                    System.out.println("Received from client " + socket.getInetAddress().getHostAddress() + ", Message : " + clientMessage);
-                    if ("exit".equalsIgnoreCase(clientMessage)) {
-                        System.out.println("Client disconnected");
-                        break;
+                    ChatProtocolParser.ParsedCommand parsedMessage = parser.parseLine(clientMessage);
+                    if (parsedMessage.type == ChatProtocolParser.CommandType.MESSAGE) {
+                        this.numberOfMessages++;
+                        if ("exit".equalsIgnoreCase(clientMessage)) {
+                            System.out.println("Client disconnected");
+                            break;
+                        }
+                        if (this.banned) {
+                            out.println("Message from " + this.nickname + " was blocked");
+                        } else {
+                            System.out.println("Received from client " + this.nickname + ", Message: " + clientMessage);
+                            out.println("message received");
+                        }
+                    } else if (parsedMessage.type == ChatProtocolParser.CommandType.NICKNAME) {
+                        System.out.println("User: " + this.nickname + " will be renamed to " + parsedMessage.value);
+                        ClientHandler.clients.remove(this.nickname);
+                        this.nickname = parsedMessage.value;
+                        ClientHandler.clients.put(this.nickname, this);
+                        out.println("Successfully changed nickname to " + this.nickname);
+                        
+                    } else if (parsedMessage.type == ChatProtocolParser.CommandType.BAN) {
+                        this.banned = true;
+                        System.out.println("User: " + this.nickname + " is now banned");
+                        out.println("User: " + this.nickname + " is now banned");
+
+                    } else if (parsedMessage.type == ChatProtocolParser.CommandType.STAT) {
+                        out.println("User: " + this.nickname + ", Number of messages: " + this.numberOfMessages + ", Number of blocked messages: " + this.numberOfBlockedMessages + ", pourcentage of blocked messages: " + (this.numberOfBlockedMessages / this.numberOfMessages) * 100 + "%");
+                    } else if (parsedMessage.type == ChatProtocolParser.CommandType.MENTION) {
+                        String mentionedUser = parsedMessage.value;
+                        ClientHandler mentionedClient = ClientHandler.clients.get(mentionedUser);
+                        System.out.println(mentionedClient);
+                        if (mentionedClient != null) {
+                            if(mentionedClient.sendMessage("Message from " + this.nickname + " : " + clientMessage)) {
+                                out.println("Message sent to " + mentionedUser);
+                            } else {
+                                out.println("Error, " + mentionedUser + " is not reachable");
+                            }
+                        } else {
+                            out.println("Error, nobody with the name " + mentionedUser + " is connected");
+                        }
                     }
-                    out.println("Server received: " + clientMessage);
                 }
                 System.out.println("Closing the connection");
+                ClientHandler.clients.remove(this.nickname);
                 socket.close();
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+
+        private Boolean sendMessage(String message) {
+            try {
+                this.printOut.println(message);
+            } catch (Exception e) {
+                return false;
+            }
+            return true;
         }
     }
 
