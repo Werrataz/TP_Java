@@ -3,7 +3,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -63,13 +65,11 @@ public class TCPMultiServer {
     private class ClientHandler extends Thread {
         private Socket socket;
         private String nickname;
-        private String user;
-        private String id;
         private PrintWriter printOut;
         private BufferedReader readIn;
         private int numberOfMessages;
-        private int numberOfBlockedMessages;
-        private Boolean banned;
+        private final List<String> banList = new ArrayList<>();
+        private int numberOfBlockedMessages = 0;
         protected static Map<String, ClientHandler> clients = new HashMap<>();
 
         /**
@@ -101,7 +101,6 @@ public class TCPMultiServer {
                     }
                 }
                 this.nickname = nickname;
-                this.banned = false;
                 ClientHandler.clients.put(this.nickname, this);
                 
                 while ((clientMessage = in.readLine()) != null) {
@@ -112,16 +111,14 @@ public class TCPMultiServer {
                             System.out.println("Client disconnected");
                             break;
                         }
-                        if (this.banned) {
-                            out.println("Message from " + this.nickname + " was blocked");
-                        } else {
-                            System.out.println("Received from client " + this.nickname + ", Message: " + clientMessage);
-                            for (ClientHandler client : ClientHandler.clients.values()) {
-                                if (!client.nickname.equals(this.nickname)) {
+                        System.out.println("Received from client " + this.nickname + ", Message: " + clientMessage);
+                        for (ClientHandler client : ClientHandler.clients.values()) {
+                            if (!client.nickname.equals(this.nickname)) {
+                                if (!client.banList.contains(this.nickname)) {
                                     client.sendMessage("Message from " + this.nickname + ": " + clientMessage);
-                                } else {
-                                    out.println("Message sent to all");
                                 }
+                            } else {
+                                out.println("Message sent to all");
                             }
                         }
                     } else if (parsedMessage.type == ChatProtocolParser.CommandType.NICKNAME) {
@@ -151,17 +148,15 @@ public class TCPMultiServer {
                             out.println("Successfully changed nickname to " + this.nickname);
                         }
                     } else if (parsedMessage.type == ChatProtocolParser.CommandType.BAN) {
-                        this.banned = true;
-                        System.out.println("User: " + this.nickname + " is now banned");
-                        out.println("User: " + this.nickname + " is now banned");
-                        //                         out.println("We want to defend the freedom of speech, so you can't ban or be banned (we didn't have the time to implement it)");
+                        this.banList.add(parsedMessage.value);
+                        out.println("You will now not see the future messages sent by " + parsedMessage.value);
                     } else if (parsedMessage.type == ChatProtocolParser.CommandType.STAT) {
-                        out.println("User: " + this.nickname + ", Number of messages: " + this.numberOfMessages + ", Number of blocked messages: " + this.numberOfBlockedMessages + ", pourcentage of blocked messages: " + {this.numberOfMessages ? (this.numberOfBlockedMessages / this.numberOfMessages * 100) : 0} + "%");
+                        out.println("User: " + this.nickname + ", number of messages: " + this.numberOfMessages + ", number of blocked messages: " + this.numberOfBlockedMessages + ", pourcentage of blocked messages: " + (this.numberOfMessages == 0 ? (this.numberOfBlockedMessages / this.numberOfMessages * 100) : 0) + "%");
                     } else if (parsedMessage.type == ChatProtocolParser.CommandType.MENTION) {
                         String mentionedUser = parsedMessage.value;
                         ClientHandler mentionedClient = ClientHandler.clients.get(mentionedUser);
                         System.out.println(mentionedClient);
-                        if (mentionedClient != null) {
+                        if (mentionedClient != null && mentionedClient.banList.contains(parsedMessage.value)) {
                             if(mentionedClient.sendMessage("Message from " + this.nickname + ": " + clientMessage)) {
                                 out.println("Message sent to " + mentionedUser);
                             } else {
