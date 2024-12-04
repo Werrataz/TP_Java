@@ -2,8 +2,13 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetAddress;
-import java.net.Socket;
+import java.security.KeyStore;
 import java.util.Scanner;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 /**
  * TCPClient is a client designed to work with the TCPMultiServer.
@@ -12,7 +17,7 @@ public class TCPClient {
 
     private String serverAddress;
     private int port;
-    private Socket socket;
+    private SSLSocket socket;
     private BufferedReader in;
     private PrintWriter out;
 
@@ -32,7 +37,22 @@ public class TCPClient {
      */
     public void start() {
         try {
-            socket = new Socket(InetAddress.getByName(this.serverAddress), this.port);
+            KeyStore keyStore = KeyStore.getInstance("JKS");
+            keyStore.load(getClass().getResourceAsStream("/client.keystore"), "password".toCharArray());
+
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keyStore, "password".toCharArray());
+
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init(keyStore);
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+
+            SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+            socket = (SSLSocket) sslSocketFactory.createSocket(InetAddress.getByName(this.serverAddress), this.port);
+            socket.startHandshake();
+
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
 
@@ -81,7 +101,7 @@ public class TCPClient {
     /**
      * The main method to run the TCPClient.
      *
-     * @param args command line arguments, where the first argument is the server address and the second argument is the port number (the second is optionnal)
+     * @param args command line arguments, where the first argument is the server address and the second argument is the port number (the second is optional)
      */
     public static void main(String[] args) {
         TCPClient client;
