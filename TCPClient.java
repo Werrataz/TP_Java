@@ -5,6 +5,9 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Scanner;
 
+/**
+ * TCPClient is a client designed to work with the TCPMultiServer.
+ */
 public class TCPClient {
 
     private String serverAddress;
@@ -13,11 +16,20 @@ public class TCPClient {
     private BufferedReader in;
     private PrintWriter out;
 
+    /**
+     * Constructs a TCPClient with the specified server address and port.
+     *
+     * @param serverAddress the address of the server to connect to
+     * @param port the port number of the server
+     */
     public TCPClient(String serverAddress, int port) {
         this.serverAddress = serverAddress;
         this.port = port;
     }
 
+    /**
+     * Starts the TCPClient, connects to the server, and handles user input and server responses.
+     */
     public void start() {
         try {
             socket = new Socket(InetAddress.getByName(this.serverAddress), this.port);
@@ -49,6 +61,9 @@ public class TCPClient {
         }
     }
 
+    /**
+     * A Runnable class that handles responses from the server.
+     */
     private class ServerResponseHandler implements Runnable {
         @Override
         public void run() {
@@ -63,6 +78,11 @@ public class TCPClient {
         }
     }
 
+    /**
+     * The main method to run the TCPClient.
+     *
+     * @param args command line arguments, where the first argument is the server address and the second argument is the port number (the second is optionnal)
+     */
     public static void main(String[] args) {
         TCPClient client;
         if (args.length < 1) {
